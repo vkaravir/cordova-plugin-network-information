@@ -29,20 +29,29 @@ var cordova = require('cordova'),
 
 module.exports = {
     getConnectionInfo: function(successCallback, errorCallback) {
-        window.navigator.connection.type = Connection.NONE;
+        // Use the HTML5 navigator.onLine field if it exists
+        // see: https://html.spec.whatwg.org/#navigator.online
+        if (typeof window.navigator.onLine === "boolean") {
+            window.navigator.connection.type =
+                window.navigator.onLine?Connection.WIFI:Connection.NONE;
+        } else {
+            window.navigator.connection.type = Connection.NONE;
 
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', 'http://www.google.com', true);
-        
-        xhr.onload = function() {
-            if (xhr.readyState === 4 && xhr.status === 200) {
-                window.navigator.connection.type = Connection.WIFI;
-            } else {
-                window.navigator.connection.type = Connection.NONE;
-            }
-        };
+            // Fallback to making a request to google
+            // Note: can fail due to cross origin request limitations
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', 'http://www.google.com', true);
 
-        xhr.send();
+            xhr.onload = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    window.navigator.connection.type = Connection.WIFI;
+                } else {
+                    window.navigator.connection.type = Connection.NONE;
+                }
+            };
+
+            xhr.send();
+        }
 
         setTimeout(function() {
             successCallback(window.navigator.connection.type);
